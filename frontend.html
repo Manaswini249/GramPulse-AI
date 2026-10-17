@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GramPulse AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 25px;
+            background: #eef5ef;
+            color: #183b2d;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: auto;
+            background: white;
+            padding: 28px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px #00000010;
+        }
+
+        h1 {
+            color: #176b4d;
+        }
+
+        .subtitle {
+            color: #617267;
+        }
+
+        label {
+            display: block;
+            margin-top: 14px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            border: 1px solid #cbd8ce;
+            border-radius: 7px;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 7px;
+            background: #176b4d;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 18px;
+            background: #eaf5ee;
+            border-radius: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .result h2 {
+            color: #176b4d;
+        }
+
+        footer {
+            margin-top: 25px;
+            text-align: center;
+            color: #617267;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <h1>GramPulse AI</h1>
+
+        <p class="subtitle">
+            Smart cash flow insights for rural micro-enterprises.
+        </p>
+
+        <form id="financeForm">
+            <label for="business">Business Name</label>
+            <input id="business" value="Village Store"
+                   maxlength="100" required>
+
+            <label for="income">Monthly Income (₹)</label>
+            <input id="income" type="number"
+                   min="0" step="0.01" required>
+
+            <label for="expenses">Monthly Expenses (₹)</label>
+            <input id="expenses" type="number"
+                   min="0" step="0.01" required>
+
+            <label for="loan">Loan Repayment (₹)</label>
+            <input id="loan" type="number"
+                   min="0" step="0.01" value="0" required>
+
+            <label for="savings">Monthly Savings (₹)</label>
+            <input id="savings" type="number"
+                   min="0" step="0.01" value="0" required>
+
+            <button id="analyzeButton" type="submit">
+                Analyze Cash Flow
+            </button>
+        </form>
+
+        <p id="status" role="status" aria-live="polite"></p>
+
+        <section class="result">
+            <h2>Financial Analysis</h2>
+            <div id="output">
+                Enter your details and click Analyze Cash Flow.
+            </div>
+        </section>
+
+        <footer>
+            GramPulse AI | AI for Rural Finance
+        </footer>
+    </main>
+
+    <script>
+        const form = document.getElementById("financeForm");
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const button = document.getElementById("analyzeButton");
+            const status = document.getElementById("status");
+            const output = document.getElementById("output");
+
+            button.disabled = true;
+            status.textContent = "Analyzing financial information...";
+            output.replaceChildren();
+
+            const payload = {
+                business_name:
+                    document.getElementById("business").value.trim(),
+                income:
+                    Number(document.getElementById("income").value),
+                expenses:
+                    Number(document.getElementById("expenses").value),
+                loan:
+                    Number(document.getElementById("loan").value),
+                savings:
+                    Number(document.getElementById("savings").value)
+            };
+
+            try {
+                const response = await fetch(
+                    "http://127.0.0.1:8000/forecast",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Unable to analyze the data.");
+                }
+
+                const data = await response.json();
+
+                const addText = (tag, text) => {
+                    const element = document.createElement(tag);
+                    element.textContent = text;
+                    output.appendChild(element);
+                };
+
+                const rupees = value =>
+                    "₹" + Number(value).toLocaleString("en-IN");
+
+                addText("p", "Business: " + data.business_name);
+                addText("p", "Monthly Net Cash Flow: " +
+                    rupees(data.monthly_net_cash_flow));
+                addText("p", "Risk Level: " + data.risk_level);
+
+                addText("h3", "Three-Month Projection");
+
+                data.three_month_projection.forEach((amount, index) => {
+                    addText(
+                        "p",
+                        "Month " + (index + 1) + ": " + rupees(amount)
+                    );
+                });
+
+                addText("h3", "Recommendations");
+
+                data.recommendations.forEach(item => {
+                    addText("p", "• " + item);
+                });
+
+                status.textContent = "Analysis completed.";
+
+            } catch (error) {
+                status.textContent =
+                    "Could not connect. Please start the backend server.";
+            } finally {
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
